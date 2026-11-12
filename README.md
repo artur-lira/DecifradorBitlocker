@@ -143,3 +143,7 @@ python -m e01bde.cli info synthetic.dd
 > - A derivação da **senha de recuperação** (48 dígitos) está implementada conforme o algoritmo público, mas recomenda-se confirmá-la contra uma chave de recuperação real antes de uso definitivo.
 > - A decifragem **nativa AES-XTS** (`--method native`) é **experimental**: para casework use `--method dislocker` (implementação de referência) e confirme montando a imagem. O Elephant diffuser (AES-CBC, Vista/7) só é tratado pelo `dislocker`.
 > - `bitlocker2john` serve como referência cruzada da extração do hash.
+
+## Licença
+
+Distribuído sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE).
