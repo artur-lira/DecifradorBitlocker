@@ -243,7 +243,17 @@ def parse_bitlocker(image, partition_offset: int) -> BitLockerVolume:
 
         entries_start = mh + header_size
         entries_end = min(mh + meta_size, len(block))
+        vhb_set = False
         for etype, vtype, _ver, data in _iter_entries(block, entries_start, entries_end):
+            if vtype == VALUE_OFFSET_SIZE and len(data) >= 16 and not vhb_set:
+                # "Volume header block": offset+size do backup dos setores de
+                # boot NTFS realocados pelo BitLocker (fonte autoritativa no
+                # Win7+; substitui o campo 0xD0 do cabecalho).
+                o, s = struct.unpack_from("<QQ", data, 0)
+                if 0 < o < image.size and 0 < s <= 1024 * 1024:
+                    vol.volume_header_offset = o
+                    vol.volume_header_size = s
+                    vhb_set = True
             if etype == ENTRY_TYPE_VMK and len(data) >= 0x1C:
                 try:
                     vol.protectors.append(_parse_vmk(data))

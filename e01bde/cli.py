@@ -322,6 +322,33 @@ def cmd_report(args):
             print(f"[!] {exc}")
 
 
+def cmd_fixboot(args):
+    _banner()
+    with open_image(args.image) as image:
+        part, vol = _pick_bitlocker_partition(image, args.partition)
+        if not vol or not vol.present:
+            print("[!] Nenhum volume BitLocker encontrado/selecionado.")
+            sys.exit(2)
+        print("[*] Recuperando VMK/FVEK...")
+        vmk = X.recover_vmk(vol, candidate=args.candidate, recovery=args.recovery)
+        fvek = X.decrypt_fvek(vol, vmk) if vmk else None
+        if not fvek:
+            print("[!] Nao foi possivel recuperar a FVEK (chave/credencial?).")
+            sys.exit(3)
+        print(f"[*] Corrigindo o inicio de: {args.img}")
+        res = X.fix_boot_sectors(image, vol, part.start_offset, args.img, fvek,
+                                 progress=lambda c, t: print(f"    varredura {c/t*100:4.1f}%",
+                                                             end="\r"),
+                                 log=print)
+        if res.get("ok"):
+            fs = X.check_decrypted_fs(args.img)
+            print(f"\n[+] Boot corrigido ({res.get('method')}). "
+                  f"Setor de boot agora: {fs or 'nao reconhecido'}")
+        else:
+            print(f"\n[!] Falha: {res.get('reason')}")
+            sys.exit(4)
+
+
 def build_parser():
     ap = argparse.ArgumentParser(
         prog="e01bde",
@@ -374,6 +401,15 @@ def build_parser():
     p.add_argument("--institution", default="[SUA INSTITUICAO]",
                    help="Nome da instituicao no cabecalho.")
     p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("fix-boot",
+                       help="Corrige o setor de boot de um .img ja exportado.")
+    p.add_argument("image", help="Imagem E01/Ex01 de origem.")
+    p.add_argument("--img", required=True, help="Arquivo .img decifrado a corrigir.")
+    p.add_argument("-p", "--partition", type=int)
+    p.add_argument("--candidate", help="Senha de usuario.")
+    p.add_argument("--recovery", help="Senha de recuperacao de 48 digitos.")
+    p.set_defaults(func=cmd_fixboot)
 
     return ap
 

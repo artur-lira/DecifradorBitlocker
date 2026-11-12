@@ -121,14 +121,17 @@ class App(tk.Tk):
         ttk.Button(expf, text="Exportar .img",
                    command=self.on_export_img).pack(side="left")
 
+        ttk.Button(act, text="Corrigir boot de um .img existente",
+                   command=self.on_fix_boot).grid(row=7, column=1, pady=4, sticky="w")
+
         ttk.Separator(act, orient="horizontal").grid(
-            row=7, column=0, columnspan=3, sticky="ew", pady=6)
-        ttk.Label(act, text="Instituição (relatório):").grid(row=8, column=0, sticky="e")
+            row=9, column=0, columnspan=3, sticky="ew", pady=6)
+        ttk.Label(act, text="Instituição (relatório):").grid(row=10, column=0, sticky="e")
         self.ent_inst = ttk.Entry(act, width=52)
         self.ent_inst.insert(0, "[SUA INSTITUICAO]")
-        self.ent_inst.grid(row=8, column=1, padx=4)
+        self.ent_inst.grid(row=10, column=1, padx=4)
         ttk.Button(act, text="Gerar relatório (.docx)",
-                   command=self.on_report).grid(row=8, column=2, padx=4)
+                   command=self.on_report).grid(row=10, column=2, padx=4)
 
         # --- Log
         logf = ttk.LabelFrame(self, text="Saida / Log", padding=4)
@@ -385,6 +388,43 @@ class App(tk.Tk):
             except Exception as exc:
                 self._log(f"[!] Falha na exportacao: {exc}")
                 self.after(0, lambda e=exc: messagebox.showerror("Erro", str(e)))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def on_fix_boot(self):
+        idx, vol = self._selected_volume()
+        if not vol:
+            return
+        part = next((p for p in self.partitions if p.index == idx), None)
+        if not part:
+            return
+        img_path = filedialog.askopenfilename(
+            title="Selecione o .img decifrado a corrigir",
+            filetypes=[("Imagem", "*.img *.dd *.raw"), ("Todos", "*.*")])
+        if not img_path:
+            return
+        pw = self.ent_pw.get().strip() or None
+        rec = self.ent_rec.get().strip() or None
+        self._log("[*] Recuperando chave e corrigindo o setor de boot...")
+
+        def work():
+            vmk = X.recover_vmk(vol, candidate=pw, recovery=rec)
+            fvek = X.decrypt_fvek(vol, vmk) if vmk else None
+            if not fvek:
+                self._log("[!] FVEK nao recuperada (chave/credencial?).")
+                return
+            res = X.fix_boot_sectors(self.image, vol, part.start_offset, img_path,
+                                     fvek, progress=lambda c, t: self._progress(c, t),
+                                     log=self._log)
+            if res.get("ok"):
+                fs = X.check_decrypted_fs(img_path)
+                self._log(f"[+] Boot corrigido ({res.get('method')}). FS agora: {fs}")
+                self.after(0, lambda: messagebox.showinfo(
+                    "Boot corrigido", f"Setor de boot restaurado.\nFS: {fs}"))
+            else:
+                self._log(f"[!] Falha: {res.get('reason')}")
+                self.after(0, lambda: messagebox.showwarning(
+                    "Falha", f"Nao foi possivel corrigir: {res.get('reason')}"))
 
         threading.Thread(target=work, daemon=True).start()
 

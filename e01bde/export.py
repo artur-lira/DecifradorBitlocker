@@ -221,15 +221,77 @@ def export_native_xts(image, volume: BitLockerVolume, partition_offset: int,
                     progress(copied, total)
 
     # Restaura os setores de boot NTFS originais (realocados pelo BitLocker).
-    if volume.volume_header_offset and volume.volume_header_size:
-        orig = image.read(partition_offset + volume.volume_header_offset,
-                          volume.volume_header_size)
-        dec = _decrypt_region(key, volume.volume_header_offset, orig, [])
+    fix_boot_sectors(image, volume, partition_offset, out_img, fvek)
+    return out_img
+
+
+def _is_ntfs(buf: bytes) -> bool:
+    return (len(buf) >= 512 and buf[3:11] == b"NTFS    "
+            and buf[510:512] == b"\x55\xAA")
+
+
+def fix_boot_sectors(image, volume: BitLockerVolume, partition_offset: int,
+                     out_img: str, fvek: bytes,
+                     scan_limit: int = 512 * 1024 * 1024,
+                     progress=None, log=None) -> dict:
+    """Restaura os setores de boot NTFS originais no inicio de `out_img`.
+
+    1) tenta o offset de backup lido dos metadados (tweak fisico e logico);
+    2) se falhar, ESCANEIA o inicio do volume procurando o setor que decifra
+       para um boot sector NTFS valido (assinatura 'NTFS    ' + 0x55AA).
+
+    Retorna um dict com o resultado. Nao refaz o volume: so corrige o inicio.
+    """
+    def _log(m):
+        if log:
+            log(m)
+
+    if volume.encryption_method not in (0x8004, 0x8005):
+        return {"ok": False, "reason": "metodo nao AES-XTS"}
+    key = fvek[:32] if volume.encryption_method == 0x8004 else fvek[:64]
+    size = volume.volume_header_size or 0x2000
+
+    def write_head(dec: bytes):
         with open(out_img, "r+b") as out:
             out.seek(0)
             out.write(dec)
 
-    return out_img
+    # 1) offset de backup conhecido (metadados / cabecalho)
+    if volume.volume_header_offset:
+        region = image.read(partition_offset + volume.volume_header_offset, size)
+        for logical in (False, True):
+            base = 0 if logical else volume.volume_header_offset
+            dec = _decrypt_region(key, base, region, [])
+            if _is_ntfs(dec):
+                write_head(dec)
+                _log(f"[+] Boot restaurado do offset {volume.volume_header_offset} "
+                     f"(tweak {'logico' if logical else 'fisico'}).")
+                return {"ok": True, "method": "metadata",
+                        "offset": volume.volume_header_offset, "logical": logical}
+
+    # 2) varredura por validacao NTFS
+    _log("[*] Procurando os setores de boot originais (varredura)...")
+    meta = [(r, 64 * 1024) for r in volume.fve_offsets if r]
+    limit = min(scan_limit, image.size - partition_offset)
+    pos = 0
+    STEP = 8 * 1024 * 1024
+    while pos < limit:
+        chunk = image.read(partition_offset + pos, min(STEP, limit - pos))
+        dec = _decrypt_region(key, pos, chunk, meta)
+        for i in range(0, len(dec) - 512 + 1, SECTOR):
+            if dec[i + 3:i + 11] == b"NTFS    " and dec[i + 510:i + 512] == b"\x55\xAA":
+                found = pos + i
+                region = image.read(partition_offset + found, size)
+                decr = _decrypt_region(key, found, region, [])
+                if _is_ntfs(decr):
+                    write_head(decr)
+                    _log(f"[+] Boot encontrado por varredura no offset {found}.")
+                    return {"ok": True, "method": "scan", "offset": found}
+        pos += len(chunk)
+        if progress:
+            progress(pos, limit)
+    _log("[!] Nao foi possivel localizar os setores de boot NTFS originais.")
+    return {"ok": False, "reason": "boot nao localizado"}
 
 
 def write_vmk_file(vmk: bytes, path: str) -> str:
