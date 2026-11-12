@@ -179,6 +179,42 @@ python tests/test_fix_boot.py        # -> OK
 > - A decifragem **nativa AES-XTS** (`--method native`, Win10/11) foi validada em imagem real (volume decifrado **monta como NTFS**) e produz saída bit a bit idêntica à via `cryptography`. Confirme sempre montando a imagem. O Elephant diffuser (AES-CBC, Vista/7) só é tratado pelo `dislocker`.
 > - `bitlocker2john` serve como referência cruzada da extração do hash.
 
+## Bibliotecas e referências
+
+A implementação é **original** (parser FVE, KDF do BitLocker, cadeia VMK → FVEK,
+exportação AES-XTS e `fix-boot`). Nenhum código foi copiado de outros projetos:
+usaram-se **bibliotecas como dependências** e **documentações de formato** como
+referência.
+
+### Bibliotecas usadas (dependências de execução)
+
+| Biblioteca | Autor / origem | Para quê |
+|---|---|---|
+| **libewf / pyewf** | Joachim Metz | Ler as imagens `.E01`/`.Ex01` (segmentadas) |
+| **cryptography** (OpenSSL) | PyCA | AES-CCM (VMK/FVEK) e fallback AES-XTS |
+| **OpenSSL / libcrypto** (via `ctypes`) | OpenSSL Project | Laço AES-XTS nativo acelerado |
+| **python-docx** | python-openxml | Geração do relatório `.docx` |
+| **tkinter, hashlib, struct, uuid, multiprocessing, argparse** | Python (biblioteca padrão) | GUI, SHA-256, parsing binário, paralelismo, CLI |
+
+### Documentação de formato (referência, não código)
+
+| Fonte | O que forneceu |
+|---|---|
+| **libbde** — Joachim Metz | Especificação pública do formato BitLocker/FVE: cabeçalho de volume, metadados FVE, entradas VMK/FVEK, tipos de *protector* e a entrada `0x000f` do boot realocado |
+| **hashcat** — `src/modules/module_22100.c` | Apenas o **vetor de teste público** (`ST_HASH` / `ST_PASS = "hashcat"`) usado para validar o KDF — nenhum código copiado |
+| Formato **EWF / Expert Witness** | Estrutura dos segmentos `.E01` (lida via libewf) |
+
+### Ferramentas orquestradas (opcionais, não embutidas)
+
+| Ferramenta | Uso neste projeto |
+|---|---|
+| **hashcat** | Ataque de dicionário / máscara ao hash (`-m 22100`) |
+| **dislocker** | Via alternativa de decifragem (implementação de referência em C) |
+| **bitlocker2john** (John the Ripper) | Conferência cruzada da extração do hash |
+
+> Os créditos acima são das respectivas bibliotecas e seus autores. Cada uma
+> mantém sua própria licença; consulte os projetos originais.
+
 ## Licença
 
 Distribuído sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE).
