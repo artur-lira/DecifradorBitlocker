@@ -1,0 +1,6 @@
+# Leitura de imagens E01/Ex01 (libewf). No Windows: pip install libewf-python
+libewf-python>=20240506
+# AES-CCM para verificacao local de candidato e clear key
+cryptography>=42.0
+# Geracao do relatorio em .docx
+python-docx>=1.1.0
