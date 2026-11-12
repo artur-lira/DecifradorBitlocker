@@ -7,4 +7,4 @@ Modulos:
   fve        parser de metadados BitLocker e extracao de hash (hashcat)
   recover    verificacao local de candidato, clear key e ataque via hashcat
 """
-__version__ = "1.0.0"
+__version__ = "2.0.0"

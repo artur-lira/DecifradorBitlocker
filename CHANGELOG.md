@@ -3,11 +3,11 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue, de modo geral, o [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
-## [1.0.0] — 2026-11-12
+## [2.0.0] — 2026-11-12
 
-Primeira versão estável. Fluxo completo validado de ponta a ponta contra uma
-evidência real (recuperação de chave conferida por ferramenta independente e
-imagem decifrada montável).
+Primeira versão pública estável. Fluxo completo validado de ponta a ponta
+contra uma evidência real (recuperação de chave conferida por ferramenta
+independente e imagem decifrada montável).
 
 ### Adicionado
 - Leitura de imagens Expert Witness `.E01`/`.Ex01` (segmentadas) via `libewf`
