@@ -77,13 +77,40 @@ python -m e01bde.cli crack caso.E01 -p 2 --mask "?d?d?d?d?d?d"
 # 5) Exportar a partição DECIFRADA para .img montável (após obter a chave)
 python -m e01bde.cli export caso.E01 -p 2 --candidate "SENHA" -o decifrada.img
 python -m e01bde.cli export caso.E01 -p 2 --recovery "123456-..." --method dislocker
-#   --method native usa decifragem AES-XTS interna (experimental, Win10/11)
+#   --method native usa decifragem AES-XTS interna (Win10/11)
+
+# 6) Gerar relatório .docx com as chaves recuperadas
+python -m e01bde.cli report caso.E01 -p 2 -o relatorio.docx --institution "MINHA INSTITUICAO"
+
+# 7) Corrigir o setor de boot de um .img já exportado (sem refazer o volume)
+python -m e01bde.cli fix-boot caso.E01 --img decifrada.img -p 2
 ```
 
 Com o hash extraído, o ataque também pode ser feito diretamente:
 ```bash
 hashcat -m 22100 caso.hash rockyou.txt
 ```
+
+---
+
+## Fluxo completo (passo a passo)
+
+Caso típico: imagem `.E01` com um volume BitLocker, obter a chave e uma imagem
+decifrada montável.
+
+| # | Passo | Como |
+|---|---|---|
+| 1 | **Abrir a imagem** e mapear partições/BitLocker | GUI "Abrir imagem" ou `info` |
+| 2 | **Ler os protectors** e decidir a via | Diagnóstico na tela / `info` |
+| 3 | **Recuperar a chave** | Clear Key → "Verificar"; senha de usuário → `crack`; chave de recuperação → `verify --recovery` |
+| 4 | **Exportar a partição decifrada** para `.img` | "Exportar .img" / `export` |
+| 5 | **Verificar** o `.img` | O log mostra `setor de boot = NTFS (OK)` |
+| 6 | Se o boot não ficou válido, **corrigir** | "Corrigir boot…" / `fix-boot` |
+| 7 | **Montar** o `.img` e analisar / **gerar relatório** | SO do analista / `report` |
+
+> **Desempenho:** a exportação lê a imagem inteira e grava um `.img` do tamanho
+> da partição. Grave o `.img` em um **disco diferente** do `.E01` (de preferência
+> SSD) — ler e gravar no mesmo disco reduz a velocidade a cerca de um terço.
 
 ---
 
@@ -137,11 +164,19 @@ python tests/make_synthetic.py synthetic.dd
 python -m e01bde.cli info synthetic.dd
 ```
 
+**3. Restauração do boot** — `tests/test_fix_boot.py` cifra um setor de boot
+NTFS com AES-XTS num offset de backup e verifica que `fix_boot_sectors` o
+localiza por varredura, decifra e deixa o `.img` reconhecível como NTFS.
+
+```bash
+python tests/test_fix_boot.py        # -> OK
+```
+
 > **Nota de precisão (para o relatório):**
 > - O KDF de **senha de usuário** está validado contra vetor real (item 1).
 > - A extração **VMK → FVEK** (AES-CCM) está validada por cadeia conhecida (item 2).
 > - A derivação da **senha de recuperação** (48 dígitos) está implementada conforme o algoritmo público, mas recomenda-se confirmá-la contra uma chave de recuperação real antes de uso definitivo.
-> - A decifragem **nativa AES-XTS** (`--method native`) é **experimental**: para casework use `--method dislocker` (implementação de referência) e confirme montando a imagem. O Elephant diffuser (AES-CBC, Vista/7) só é tratado pelo `dislocker`.
+> - A decifragem **nativa AES-XTS** (`--method native`, Win10/11) foi validada em imagem real (volume decifrado **monta como NTFS**) e produz saída bit a bit idêntica à via `cryptography`. Confirme sempre montando a imagem. O Elephant diffuser (AES-CBC, Vista/7) só é tratado pelo `dislocker`.
 > - `bitlocker2john` serve como referência cruzada da extração do hash.
 
 ## Licença
