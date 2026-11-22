@@ -121,7 +121,7 @@ class App(tk.Tk):
         ttk.Button(expf, text="Exportar .img",
                    command=self.on_export_img).pack(side="left")
 
-        ttk.Button(act, text="Corrigir boot de um .img existente",
+        ttk.Button(act, text="Corrigir .img existente (boot + regiões FVE)",
                    command=self.on_fix_boot).grid(row=7, column=1, pady=4, sticky="w")
 
         ttk.Separator(act, orient="horizontal").grid(
@@ -413,18 +413,29 @@ class App(tk.Tk):
             if not fvek:
                 self._log("[!] FVEK nao recuperada (chave/credencial?).")
                 return
+            # 1) re-decifra as regioes de metadados FVE (imagens antigas)
+            try:
+                n = X.patch_fve_regions(self.image, vol, part.start_offset,
+                                        img_path, fvek, log=self._log)
+                if n:
+                    self._log(f"[+] {n} regiao(oes) FVE re-decifrada(s).")
+            except Exception as exc:
+                self._log(f"[!] Aviso ao corrigir regioes FVE: {exc}")
+            # 2) restaura o setor de boot
             res = X.fix_boot_sectors(self.image, vol, part.start_offset, img_path,
                                      fvek, progress=lambda c, t: self._progress(c, t),
                                      log=self._log)
             if res.get("ok"):
                 fs = X.check_decrypted_fs(img_path)
-                self._log(f"[+] Boot corrigido ({res.get('method')}). FS agora: {fs}")
+                self._log(f"[+] Imagem corrigida (boot: {res.get('method')}). FS: {fs}")
                 self.after(0, lambda: messagebox.showinfo(
-                    "Boot corrigido", f"Setor de boot restaurado.\nFS: {fs}"))
+                    "Imagem corrigida",
+                    f"Boot restaurado e regiões FVE re-decifradas.\nFS: {fs}"))
             else:
-                self._log(f"[!] Falha: {res.get('reason')}")
+                self._log(f"[!] Falha no boot: {res.get('reason')}")
                 self.after(0, lambda: messagebox.showwarning(
-                    "Falha", f"Nao foi possivel corrigir: {res.get('reason')}"))
+                    "Falha", f"Regiões FVE corrigidas, mas o boot falhou: "
+                             f"{res.get('reason')}"))
 
         threading.Thread(target=work, daemon=True).start()
 

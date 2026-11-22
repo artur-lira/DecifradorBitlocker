@@ -187,7 +187,11 @@ def export_native_xts(image, volume: BitLockerVolume, partition_offset: int,
 
     # Para XTS-128 a FVEK tem 32 bytes (2x128); para XTS-256, 64 bytes (2x256).
     key = fvek[:32] if volume.encryption_method == 0x8004 else fvek[:64]
-    meta_regions = [(rel, 64 * 1024) for rel in volume.fve_offsets if rel]
+    # Decifra o volume UNIFORMEMENTE, inclusive as 3 regioes de metadados FVE
+    # (como as ferramentas de referencia). Essas regioes nao guardam dados de
+    # arquivo do NTFS; decifra-las garante imagem identica byte a byte e nao
+    # afeta a montagem. Apenas o inicio (boot) e tratado por fix_boot_sectors.
+    meta_regions = []
     total = partition_length
     io_buffer = max(SECTOR, (io_buffer // SECTOR) * SECTOR)
 
@@ -223,6 +227,47 @@ def export_native_xts(image, volume: BitLockerVolume, partition_offset: int,
     # Restaura os setores de boot NTFS originais (realocados pelo BitLocker).
     fix_boot_sectors(image, volume, partition_offset, out_img, fvek)
     return out_img
+
+
+META_REGION_SIZE = 64 * 1024     # tamanho de cada regiao de metadados FVE
+
+
+def patch_fve_regions(image, volume: BitLockerVolume, partition_offset: int,
+                      out_img: str, fvek: bytes, log=None) -> int:
+    """Re-decifra as 3 regioes de metadados FVE num `.img` ja exportado.
+
+    Versoes <= antigas copiavam essas regioes verbatim; esta funcao as
+    substitui pela decifragem AES-XTS (como as ferramentas de referencia),
+    deixando a imagem identica byte a byte — sem refazer o volume inteiro.
+    """
+    def _log(m):
+        if log:
+            log(m)
+    if volume.encryption_method not in (0x8004, 0x8005):
+        return 0
+    key = fvek[:32] if volume.encryption_method == 0x8004 else fvek[:64]
+    total = None
+    try:
+        total = os.path.getsize(out_img)
+    except OSError:
+        pass
+    count = 0
+    with open(out_img, "r+b") as out:
+        for rel in volume.fve_offsets:
+            if not rel:
+                continue
+            if total is not None and rel >= total:
+                continue
+            size = META_REGION_SIZE
+            if total is not None:
+                size = min(size, total - rel)
+            region = image.read(partition_offset + rel, size)
+            dec = _decrypt_region(key, rel, region, [])
+            out.seek(rel)
+            out.write(dec)
+            count += 1
+            _log(f"[+] Regiao FVE re-decifrada no offset {rel} ({size} bytes).")
+    return count
 
 
 def _is_ntfs(buf: bytes) -> bool:

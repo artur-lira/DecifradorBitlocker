@@ -3,6 +3,19 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue, de modo geral, o [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [2.0.1] — 2026-11-22
+
+### Corrigido
+- **Decifragem uniforme**: as 3 regiões de metadados FVE deixam de ser copiadas
+  verbatim e passam a ser decifradas com a FVEK, como as ferramentas de
+  referência — a imagem exportada agora é idêntica byte a byte. As regiões não
+  guardam dados de arquivo do NTFS, então a montagem não é afetada.
+
+### Adicionado
+- `patch_fve_regions()` e o comando `fix-fve` (e ação na GUI) para re-decifrar
+  essas regiões em um `.img` já exportado por versões anteriores, sem refazer o
+  volume inteiro. O botão da GUI agora corrige boot **e** regiões FVE de uma vez.
+
 ## [2.0.0] — 2026-11-12
 
 Primeira versão pública estável. Fluxo completo validado de ponta a ponta

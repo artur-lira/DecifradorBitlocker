@@ -349,6 +349,24 @@ def cmd_fixboot(args):
             sys.exit(4)
 
 
+def cmd_fixfve(args):
+    _banner()
+    with open_image(args.image) as image:
+        part, vol = _pick_bitlocker_partition(image, args.partition)
+        if not vol or not vol.present:
+            print("[!] Nenhum volume BitLocker encontrado/selecionado.")
+            sys.exit(2)
+        vmk = X.recover_vmk(vol, candidate=args.candidate, recovery=args.recovery)
+        fvek = X.decrypt_fvek(vol, vmk) if vmk else None
+        if not fvek:
+            print("[!] Nao foi possivel recuperar a FVEK (chave/credencial?).")
+            sys.exit(3)
+        print(f"[*] Re-decifrando as regioes de metadados FVE em: {args.img}")
+        n = X.patch_fve_regions(image, vol, part.start_offset, args.img, fvek, log=print)
+        print(f"[+] {n} regiao(oes) FVE corrigida(s). A imagem agora decifra o "
+              f"volume uniformemente.")
+
+
 def build_parser():
     ap = argparse.ArgumentParser(
         prog="e01bde",
@@ -410,6 +428,16 @@ def build_parser():
     p.add_argument("--candidate", help="Senha de usuario.")
     p.add_argument("--recovery", help="Senha de recuperacao de 48 digitos.")
     p.set_defaults(func=cmd_fixboot)
+
+    p = sub.add_parser("fix-fve",
+                       help="Re-decifra as regioes FVE de um .img ja exportado "
+                            "(para imagens feitas por versoes antigas).")
+    p.add_argument("image", help="Imagem E01/Ex01 de origem.")
+    p.add_argument("--img", required=True, help="Arquivo .img decifrado a corrigir.")
+    p.add_argument("-p", "--partition", type=int)
+    p.add_argument("--candidate", help="Senha de usuario.")
+    p.add_argument("--recovery", help="Senha de recuperacao de 48 digitos.")
+    p.set_defaults(func=cmd_fixfve)
 
     return ap
 
