@@ -121,9 +121,6 @@ class App(tk.Tk):
         ttk.Button(expf, text="Exportar .img",
                    command=self.on_export_img).pack(side="left")
 
-        ttk.Button(act, text="Corrigir .img existente (boot + regiões FVE)",
-                   command=self.on_fix_boot).grid(row=7, column=1, pady=4, sticky="w")
-
         ttk.Separator(act, orient="horizontal").grid(
             row=9, column=0, columnspan=3, sticky="ew", pady=6)
         ttk.Label(act, text="Instituição (relatório):").grid(row=10, column=0, sticky="e")
@@ -388,54 +385,6 @@ class App(tk.Tk):
             except Exception as exc:
                 self._log(f"[!] Falha na exportacao: {exc}")
                 self.after(0, lambda e=exc: messagebox.showerror("Erro", str(e)))
-
-        threading.Thread(target=work, daemon=True).start()
-
-    def on_fix_boot(self):
-        idx, vol = self._selected_volume()
-        if not vol:
-            return
-        part = next((p for p in self.partitions if p.index == idx), None)
-        if not part:
-            return
-        img_path = filedialog.askopenfilename(
-            title="Selecione o .img decifrado a corrigir",
-            filetypes=[("Imagem", "*.img *.dd *.raw"), ("Todos", "*.*")])
-        if not img_path:
-            return
-        pw = self.ent_pw.get().strip() or None
-        rec = self.ent_rec.get().strip() or None
-        self._log("[*] Recuperando chave e corrigindo o setor de boot...")
-
-        def work():
-            vmk = X.recover_vmk(vol, candidate=pw, recovery=rec)
-            fvek = X.decrypt_fvek(vol, vmk) if vmk else None
-            if not fvek:
-                self._log("[!] FVEK nao recuperada (chave/credencial?).")
-                return
-            # 1) re-decifra as regioes de metadados FVE (imagens antigas)
-            try:
-                n = X.patch_fve_regions(self.image, vol, part.start_offset,
-                                        img_path, fvek, log=self._log)
-                if n:
-                    self._log(f"[+] {n} regiao(oes) FVE re-decifrada(s).")
-            except Exception as exc:
-                self._log(f"[!] Aviso ao corrigir regioes FVE: {exc}")
-            # 2) restaura o setor de boot
-            res = X.fix_boot_sectors(self.image, vol, part.start_offset, img_path,
-                                     fvek, progress=lambda c, t: self._progress(c, t),
-                                     log=self._log)
-            if res.get("ok"):
-                fs = X.check_decrypted_fs(img_path)
-                self._log(f"[+] Imagem corrigida (boot: {res.get('method')}). FS: {fs}")
-                self.after(0, lambda: messagebox.showinfo(
-                    "Imagem corrigida",
-                    f"Boot restaurado e regiões FVE re-decifradas.\nFS: {fs}"))
-            else:
-                self._log(f"[!] Falha no boot: {res.get('reason')}")
-                self.after(0, lambda: messagebox.showwarning(
-                    "Falha", f"Regiões FVE corrigidas, mas o boot falhou: "
-                             f"{res.get('reason')}"))
 
         threading.Thread(target=work, daemon=True).start()
 

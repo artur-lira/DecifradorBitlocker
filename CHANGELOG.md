@@ -3,18 +3,18 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue, de modo geral, o [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
-## [2.0.1] — 2026-11-22
+## [2.0.2] — 2026-11-22
 
-### Corrigido
-- **Decifragem uniforme**: as 3 regiões de metadados FVE deixam de ser copiadas
-  verbatim e passam a ser decifradas com a FVEK, como as ferramentas de
-  referência — a imagem exportada agora é idêntica byte a byte. As regiões não
-  guardam dados de arquivo do NTFS, então a montagem não é afetada.
+### Alterado
+- A exportação passa a produzir sempre uma `.img` correta e montável sem
+  nenhum passo manual: decifra o volume **uniformemente** (inclusive as 3
+  regiões de metadados FVE, antes copiadas verbatim) e **restaura o setor de
+  boot automaticamente** ao final.
 
-### Adicionado
-- `patch_fve_regions()` e o comando `fix-fve` (e ação na GUI) para re-decifrar
-  essas regiões em um `.img` já exportado por versões anteriores, sem refazer o
-  volume inteiro. O botão da GUI agora corrige boot **e** regiões FVE de uma vez.
+### Removido
+- Comandos manuais `fix-boot` e `fix-fve` (CLI) e o botão correspondente na
+  GUI — não são mais necessários, pois a exportação já corrige boot e regiões
+  FVE. A restauração do boot permanece como etapa interna do `export`.
 
 ## [2.0.0] — 2026-11-12
 

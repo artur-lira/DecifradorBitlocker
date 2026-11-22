@@ -81,10 +81,11 @@ python -m e01bde.cli export caso.E01 -p 2 --recovery "123456-..." --method dislo
 
 # 6) Gerar relatório .docx com as chaves recuperadas
 python -m e01bde.cli report caso.E01 -p 2 -o relatorio.docx --institution "MINHA INSTITUICAO"
-
-# 7) Corrigir o setor de boot de um .img já exportado (sem refazer o volume)
-python -m e01bde.cli fix-boot caso.E01 --img decifrada.img -p 2
 ```
+
+> A exportação (`export`) já decifra o volume uniformemente (inclusive as
+> regiões de metadados FVE) e restaura o setor de boot automaticamente — a
+> `.img` resultante sai pronta e montável, sem passos manuais de correção.
 
 Com o hash extraído, o ataque também pode ser feito diretamente:
 ```bash
@@ -103,10 +104,9 @@ decifrada montável.
 | 1 | **Abrir a imagem** e mapear partições/BitLocker | GUI "Abrir imagem" ou `info` |
 | 2 | **Ler os protectors** e decidir a via | Diagnóstico na tela / `info` |
 | 3 | **Recuperar a chave** | Clear Key → "Verificar"; senha de usuário → `crack`; chave de recuperação → `verify --recovery` |
-| 4 | **Exportar a partição decifrada** para `.img` | "Exportar .img" / `export` |
+| 4 | **Exportar a partição decifrada** para `.img` (já corrige boot e regiões FVE) | "Exportar .img" / `export` |
 | 5 | **Verificar** o `.img` | O log mostra `setor de boot = NTFS (OK)` |
-| 6 | Se o boot não ficou válido, **corrigir** | "Corrigir boot…" / `fix-boot` |
-| 7 | **Montar** o `.img` e analisar / **gerar relatório** | SO do analista / `report` |
+| 6 | **Montar** o `.img` e analisar / **gerar relatório** | SO do analista / `report` |
 
 > **Desempenho:** a exportação lê a imagem inteira e grava um `.img` do tamanho
 > da partição. Grave o `.img` em um **disco diferente** do `.E01` (de preferência
