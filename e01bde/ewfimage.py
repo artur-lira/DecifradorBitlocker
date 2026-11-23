@@ -158,6 +158,6 @@ def open_image(path: str) -> EwfImage:
     """Abre uma imagem E01/Ex01 ou, se for .dd/.raw/.img, em modo bruto."""
     path = os.path.normpath(path)
     ext = os.path.splitext(path)[1].lower()
-    if ext in (".dd", ".raw", ".img", ".bin"):
+    if ext in (".dd", ".raw", ".img", ".bin", ".001", ".000"):
         return RawImage(path)
     return EwfImage(path)

@@ -353,10 +353,10 @@ def build_parser():
     p.add_argument("--hashcat", help="Caminho do executavel hashcat.")
     p.set_defaults(func=cmd_crack)
 
-    p = sub.add_parser("export", help="Exporta a particao DECIFRADA para .img.")
+    p = sub.add_parser("export", help="Exporta a particao DECIFRADA (imagem RAW .001).")
     p.add_argument("image")
     p.add_argument("-p", "--partition", type=int)
-    p.add_argument("-o", "--output", help="Arquivo .img de saida.")
+    p.add_argument("-o", "--output", help="Arquivo de saida (.001 por padrao).")
     p.add_argument("--candidate", help="Senha de usuario (desbloqueio).")
     p.add_argument("--recovery", help="Senha de recuperacao de 48 digitos.")
     p.add_argument("--method", choices=["dislocker", "native"], default="dislocker",

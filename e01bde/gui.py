@@ -103,7 +103,7 @@ class App(tk.Tk):
 
         ttk.Separator(act, orient="horizontal").grid(
             row=4, column=0, columnspan=3, sticky="ew", pady=6)
-        ttk.Label(act, text="Exportar particao DECIFRADA (.img):").grid(
+        ttk.Label(act, text="Exportar particao DECIFRADA (.001):").grid(
             row=5, column=0, sticky="e")
         # No Windows o dislocker nao e nativo; o padrao e a via nativa AES-XTS.
         self.export_method = tk.StringVar(
@@ -118,7 +118,7 @@ class App(tk.Tk):
         self.spin_workers = ttk.Spinbox(expf, from_=1, to=64, width=4)
         self.spin_workers.set(os.cpu_count() or 1)  # paralelo por padrao (todos)
         self.spin_workers.pack(side="left", padx=(2, 6))
-        ttk.Button(expf, text="Exportar .img",
+        ttk.Button(expf, text="Exportar imagem (.001)",
                    command=self.on_export_img).pack(side="left")
 
         ttk.Separator(act, orient="horizontal").grid(
@@ -322,8 +322,11 @@ class App(tk.Tk):
                                 "(ou use um volume com Clear Key).")
             return
         out = filedialog.asksaveasfilename(
-            title="Salvar imagem decifrada", defaultextension=".img",
-            initialfile=X.default_decrypted_name(self.image_path, part))
+            title="Salvar imagem decifrada", defaultextension=".001",
+            initialfile=X.default_decrypted_name(self.image_path, part),
+            filetypes=[("Imagem RAW (.001)", "*.001"),
+                       ("Imagem RAW (.img/.dd/.raw)", "*.img *.dd *.raw"),
+                       ("Todos", "*.*")])
         if not out:
             return
         method = self.export_method.get()

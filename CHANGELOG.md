@@ -3,6 +3,14 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue, de modo geral, o [Keep a Changelog](https://keepachangelog.com/pt-BR/).
 
+## [2.0.3] — 2026-11-23
+
+### Alterado
+- A imagem exportada passa a usar, por padrão, a extensão **`.001`** (primeiro
+  segmento de imagem RAW, convenção do FTK Imager) em vez de `.img`. O conteúdo
+  é o mesmo: imagem crua, byte a byte, da partição decifrada. A origem também
+  passa a reconhecer `.001`/`.000` como imagem RAW.
+
 ## [2.0.2] — 2026-11-22
 
 ### Alterado

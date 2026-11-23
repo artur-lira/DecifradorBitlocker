@@ -306,15 +306,15 @@ def write_vmk_file(vmk: bytes, path: str) -> str:
 
 
 def default_decrypted_name(image_path: str, partition) -> str:
-    """Nome padrao do arquivo exportado.
+    """Nome padrao do arquivo exportado (imagem RAW, primeiro segmento .001).
 
-    Ex.: "Image.bin.E01 - Partition 3 (235,49 GB)_decrypted.img"
+    Ex.: "Image.bin.E01 - Partition 3 (235,49 GB)_decrypted.001"
     Tamanho em GiB com 2 casas e virgula decimal (padrao pt-BR), rotulo "GB".
     """
     base = os.path.basename(image_path) if image_path else "Image"
     gib = partition.length / (1024 ** 3)
     size = f"{gib:.2f}".replace(".", ",")
-    return f"{base} - Partition {partition.index} ({size} GB)_decrypted.img"
+    return f"{base} - Partition {partition.index} ({size} GB)_decrypted.001"
 
 
 def make_progress(log_fn, min_interval: float = 1.0):

@@ -9,7 +9,7 @@ Ferramenta (Windows/Linux) que:
 5. **Extrai o hash** atacável no formato **hashcat `-m 22100`**;
 6. **Verifica localmente** uma senha / chave de recuperação que você já possua (AES-CCM, sem GPU, sem falso-positivo);
 7. Dispara um **ataque de dicionário/máscara** via **hashcat**;
-8. **Exporta a partição descriptografada para `.img`** montável (via `dislocker` ou decifragem nativa AES-XTS), recuperando VMK → FVEK → setores.
+8. **Exporta a partição descriptografada para imagem RAW (`.001`)** montável (via `dislocker` ou decifragem nativa AES-XTS), recuperando VMK → FVEK → setores.
 
 > ⚙️ Uso restrito a contextos devidamente autorizados. Opere sobre **cópia** da imagem, preservando a cadeia de custódia.
 
@@ -74,10 +74,11 @@ python -m e01bde.cli crack caso.E01 -p 2 --wordlist rockyou.txt
 #   ou máscara de força bruta:
 python -m e01bde.cli crack caso.E01 -p 2 --mask "?d?d?d?d?d?d"
 
-# 5) Exportar a partição DECIFRADA para .img montável (após obter a chave)
-python -m e01bde.cli export caso.E01 -p 2 --candidate "SENHA" -o decifrada.img
+# 5) Exportar a partição DECIFRADA para imagem RAW .001 montável (após obter a chave)
+python -m e01bde.cli export caso.E01 -p 2 --candidate "SENHA" -o decifrada.001
 python -m e01bde.cli export caso.E01 -p 2 --recovery "123456-..." --method dislocker
 #   --method native usa decifragem AES-XTS interna (Win10/11)
+#   sem -o, o nome padrão termina em .001 (imagem RAW)
 
 # 6) Gerar relatório .docx com as chaves recuperadas
 python -m e01bde.cli report caso.E01 -p 2 -o relatorio.docx --institution "MINHA INSTITUICAO"
@@ -104,12 +105,12 @@ decifrada montável.
 | 1 | **Abrir a imagem** e mapear partições/BitLocker | GUI "Abrir imagem" ou `info` |
 | 2 | **Ler os protectors** e decidir a via | Diagnóstico na tela / `info` |
 | 3 | **Recuperar a chave** | Clear Key → "Verificar"; senha de usuário → `crack`; chave de recuperação → `verify --recovery` |
-| 4 | **Exportar a partição decifrada** para `.img` (já corrige boot e regiões FVE) | "Exportar .img" / `export` |
-| 5 | **Verificar** o `.img` | O log mostra `setor de boot = NTFS (OK)` |
-| 6 | **Montar** o `.img` e analisar / **gerar relatório** | SO do analista / `report` |
+| 4 | **Exportar a partição decifrada** para imagem RAW `.001` (já corrige boot e regiões FVE) | "Exportar imagem" / `export` |
+| 5 | **Verificar** a imagem | O log mostra `setor de boot = NTFS (OK)` |
+| 6 | **Montar** a imagem e analisar / **gerar relatório** | SO do analista / `report` |
 
-> **Desempenho:** a exportação lê a imagem inteira e grava um `.img` do tamanho
-> da partição. Grave o `.img` em um **disco diferente** do `.E01` (de preferência
+> **Desempenho:** a exportação lê a imagem inteira e grava um `.001` do tamanho
+> da partição. Grave-o em um **disco diferente** do `.E01` (de preferência
 > SSD) — ler e gravar no mesmo disco reduz a velocidade a cerca de um terço.
 
 ---
